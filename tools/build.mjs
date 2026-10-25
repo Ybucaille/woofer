@@ -18,7 +18,19 @@ const UNIFORMS = [
   ["float", "uLevel"], ["float", "uBass"], ["float", "uMid"], ["float", "uHigh"], ["float", "uBeat"],
   ["vec4", "uSpec0"], ["vec4", "uSpec1"], ["vec4", "uSpec2"], ["vec4", "uSpec3"],
   ["vec4", "uColor1"], ["vec4", "uColor2"], ["vec4", "uColor3"], ["float", "uIntensity"],
+  ["vec2", "iWallpaperSize"],
 ];
+
+// Presets never sample iWallpaper directly: each host wraps it in wall() so the Rust daemon can bind it its own way.
+const WALL = `
+vec4 wall(vec2 uv) {
+    float sa = iResolution.x / max(iResolution.y, 1.0);
+    float wa = iWallpaperSize.x / max(iWallpaperSize.y, 1.0);
+    vec2 s = sa > wa ? vec2(1.0, wa / sa) : vec2(sa / wa, 1.0);
+    vec2 t = (uv - 0.5) * s + 0.5;
+    return texture(iWallpaper, vec2(t.x, 1.0 - t.y));
+}
+`;
 
 const HELPERS = `
 float spec(int i) {
@@ -42,7 +54,8 @@ layout(std140, binding = 0) uniform buf {
     float qt_Opacity;
 ${UNIFORMS.map(([t, n]) => `    ${t} ${n};`).join("\n")}
 };
-${HELPERS}
+layout(binding = 1) uniform sampler2D iWallpaper;
+${HELPERS}${WALL}
 #line 1
 ${body}
 void main() {
@@ -58,8 +71,9 @@ function webSource(body) {
 precision highp float;
 precision highp int;
 ${UNIFORMS.map(([t, n]) => `uniform ${t} ${n};`).join("\n")}
+uniform sampler2D iWallpaper;
 out vec4 rd_FragColor;
-${HELPERS}
+${HELPERS}${WALL}
 #line 1
 ${body}
 void main() {

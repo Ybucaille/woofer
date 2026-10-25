@@ -32,9 +32,37 @@
     if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
     var u = {};
     ["iTime", "iResolution", "uFlow", "uLevel", "uBass", "uMid", "uHigh", "uBeat", "uSpec0", "uSpec1", "uSpec2", "uSpec3",
-     "uColor1", "uColor2", "uColor3", "uIntensity"].forEach(function (n) { u[n] = gl.getUniformLocation(p, n); });
+     "uColor1", "uColor2", "uColor3", "uIntensity", "iWallpaper", "iWallpaperSize"].forEach(function (n) { u[n] = gl.getUniformLocation(p, n); });
     return (programs[preset.id] = { prog: p, u: u });
   }
+
+  // ---- wallpaper texture: ?wall=<url>, else web/local/wall.jpg (gitignored, dev only), else a neutral gradient
+  var wallTex = gl.createTexture(), wallSize = [1, 1];
+  gl.bindTexture(gl.TEXTURE_2D, wallTex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([20, 22, 30, 255]));
+  function setWallpaper(img) {
+    gl.bindTexture(gl.TEXTURE_2D, wallTex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT);
+    wallSize = [img.naturalWidth || img.width, img.naturalHeight || img.height];
+  }
+  function loadWallpaper(url, fallback) {
+    var img = new Image();
+    img.onload = function () { setWallpaper(img); };
+    img.onerror = fallback || null;
+    img.src = url;
+  }
+  function gradientWallpaper() {
+    var c = document.createElement("canvas"); c.width = 1920; c.height = 1080;
+    var g = c.getContext("2d"), lg = g.createLinearGradient(0, 0, 1920, 1080);
+    lg.addColorStop(0, "#1b2140"); lg.addColorStop(0.5, "#4a2c5e"); lg.addColorStop(1, "#c06a4a");
+    g.fillStyle = lg; g.fillRect(0, 0, 1920, 1080);
+    setWallpaper(c);
+  }
+  loadWallpaper(params.get("wall") || "local/wall.jpg", gradientWallpaper);
 
   // ---- presets UI
   var presets = window.RD_PRESETS || [];
@@ -107,6 +135,8 @@
   $("mic").onclick = function () {
     navigator.mediaDevices.getUserMedia({ audio: true }).then(function (s) { ensureAudio(); connect(ac.createMediaStreamSource(s), false); });
   };
+  $("wallBtn").onclick = function () { $("wallFile").click(); };
+  $("wallFile").onchange = function (e) { var f = e.target.files[0]; if (f) loadWallpaper(URL.createObjectURL(f)); };
   $("fileBtn").onclick = function () { $("file").click(); };
   $("file").onchange = function (e) {
     var f = e.target.files[0]; if (!f) return;
@@ -183,6 +213,8 @@
       for (var q = 0; q < 4; q++) gl.uniform4f(u["uSpec" + q], s.spec[q * 4], s.spec[q * 4 + 1], s.spec[q * 4 + 2], s.spec[q * 4 + 3]);
       gl.uniform4fv(u.uColor1, COLORS[0]); gl.uniform4fv(u.uColor2, COLORS[1]); gl.uniform4fv(u.uColor3, COLORS[2]);
       gl.uniform1f(u.uIntensity, intensity);
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, wallTex);
+      gl.uniform1i(u.iWallpaper, 0); gl.uniform2f(u.iWallpaperSize, wallSize[0], wallSize[1]);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
       window.__rd.error = null;
     } catch (e) {

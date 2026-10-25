@@ -39,17 +39,29 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
 | `uSpec0..uSpec3` | vec4 | 16 log-spaced spectrum bins 0..1 (low → high) |
 | `uColor1` `uColor2` `uColor3` | vec4 | theme colours (primary, secondary, accent), straight alpha |
 | `uIntensity` | float | user multiplier for reactivity, default 1.0 |
+| `iWallpaperSize` | vec2 | wallpaper size in pixels (1,1 when none) |
 
 Helpers provided by the wrapper:
 
 ```glsl
 float spec(int i);      // bin 0..15
 float specAt(float x);  // x in 0..1, linear interpolation across bins
+vec4 wall(vec2 uv);     // the user's wallpaper, cover-fitted; uv 0..1 over the screen, origin bottom-left
 ```
+
+Never sample `iWallpaper` yourself, always go through `wall()`: the Rust daemon binds the texture differently.
+
+## Two preset families
+
+- **Wallpaper effects** (the flagship, "your wallpaper, but alive"): start from `wall(uv)` and bring it to life —
+  breathing zoom on bass, ripples / displacement on the beat, chromatic aberration on kicks, slow parallax / wind when quiet.
+  Output opaque. Must stay faithful to the picture: the user chose that wallpaper, don't bury it.
+- **Generative**: procedural visuals that ignore or lightly blend the wallpaper.
 
 ## Taste rules
 
 - Desktop background first: it must look good **silent** (slow idle motion) and not be tiring for hours.
 - React to music with restraint; scale everything by `uIntensity`.
 - Use the theme colours so it matches the user's Material You palette (Caelestia).
+- Silence must be nearly still and cheap: the daemon will drop to a very low frame rate when quiet.
 - Cheap: target < 2 ms/frame at 1080p on an integrated GPU. Max ~64 loop iterations, no raymarching with 100+ steps.
