@@ -24,6 +24,6 @@ Start it with Hyprland — add to hyprland.conf:
   exec-once = qs -p "$PWD/quickshell/shell.qml"
 
 Switch preset live:
-  qs -p "$PWD/quickshell/shell.qml" ipc call reactive setPreset <id>
+  qs -p "$PWD/quickshell/shell.qml" ipc call woofer setPreset <id>
 Presets: $(ls shaders/*.glsl | xargs -n1 basename | sed 's/\.glsl$//' | paste -sd' ')
 MSG

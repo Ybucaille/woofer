@@ -6,15 +6,15 @@ import Quickshell.Io
 import Quickshell.Wayland
 
 // Standalone entry: `qs -p quickshell/shell.qml`. Draws behind windows, above the wallpaper, click-through.
-// Switch preset live: `qs -p quickshell/shell.qml ipc call reactive setPreset nebula`
+// Switch preset live: `qs -p quickshell/shell.qml ipc call woofer setPreset nebula`
 ShellRoot {
     id: shell
 
-    property string preset: Quickshell.env("RD_PRESET") || "pulse"
-    property real renderScale: parseFloat(Quickshell.env("RD_SCALE")) || 0.75
-    property real intensity: parseFloat(Quickshell.env("RD_INTENSITY")) || 1
-    // Colours follow the Caelestia (Material You) scheme when present; RD_COLORS=default keeps the built-in ones.
-    property bool useTheme: Quickshell.env("RD_COLORS") !== "default"
+    property string preset: Quickshell.env("WOOFER_PRESET") || "pulse"
+    property real renderScale: parseFloat(Quickshell.env("WOOFER_SCALE")) || 0.75
+    property real intensity: parseFloat(Quickshell.env("WOOFER_INTENSITY")) || 1
+    // Colours follow the Caelestia (Material You) scheme when present; WOOFER_COLORS=default keeps the built-in ones.
+    property bool useTheme: Quickshell.env("WOOFER_COLORS") !== "default"
     property var themeColours: null
 
     AudioSource {
@@ -44,7 +44,7 @@ ShellRoot {
             color: "transparent"
             exclusionMode: ExclusionMode.Ignore
             WlrLayershell.layer: WlrLayer.Bottom
-            WlrLayershell.namespace: "reactive-desktop"
+            WlrLayershell.namespace: "woofer"
             mask: Region {}
             anchors {
                 top: true
@@ -73,7 +73,7 @@ ShellRoot {
     }
 
     IpcHandler {
-        target: "reactive"
+        target: "woofer"
 
         function setPreset(name: string): void {
             shell.preset = name;

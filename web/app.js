@@ -160,7 +160,7 @@
     recorder.onstop = function () {
       var a = document.createElement("a");
       a.href = URL.createObjectURL(new Blob(chunks, { type: "video/webm" }));
-      a.download = "reactive-" + current.id + "-" + Date.now() + ".webm";
+      a.download = "woofer-" + current.id + "-" + Date.now() + ".webm";
       a.click();
       recorder = null; recSize = null;
       document.body.classList.remove("portrait");
