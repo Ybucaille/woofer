@@ -1,0 +1,6 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "preview", "runtimeExecutable": "python", "runtimeArgs": ["-m", "http.server", "4420", "--bind", "127.0.0.1"], "port": 4420 }
+  ]
+}
