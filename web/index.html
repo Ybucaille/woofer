@@ -15,6 +15,8 @@
   button, select, input[type=range] { font: inherit; color: var(--fg); background: #232737; border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; }
   button:hover { background: #2d3247; }
   #desc { color: var(--muted); flex-basis: 100%; }
+  body.portrait canvas { left: 50%; width: calc(100vh * 9 / 16); transform: translateX(-50%); }
+  #rec.on { background: #8c1d2b; }
   #meters { font: 12px ui-monospace, monospace; color: var(--muted); }
 </style>
 </head>
@@ -27,6 +29,7 @@
   <button id="mic">🎤 Mic</button>
   <label><button id="fileBtn" type="button">📁 Audio file</button><input id="file" type="file" accept="audio/*" hidden></label>
   <label>Intensity <input id="intensity" type="range" min="0" max="2" step="0.05" value="1"></label>
+  <button id="rec" title="Record a 1080×1920 clip with audio">⏺ Record 9:16</button>
   <button id="hide" title="Hide UI (H)">Hide</button>
   <span id="meters"></span>
   <div id="desc"></div>

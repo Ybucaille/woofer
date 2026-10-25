@@ -54,7 +54,7 @@
   if (params.get("ui") === "0") toggleUi();
 
   // ---- audio
-  var ac = null, analyser = null, freq = null, source = null;
+  var ac = null, analyser = null, freq = null, source = null, recDest = null, sourceAudible = false;
   function ensureAudio() {
     if (ac) return;
     ac = new AudioContext();
@@ -62,13 +62,15 @@
     analyser.fftSize = 4096;
     analyser.smoothingTimeConstant = 0.5;
     freq = new Uint8Array(analyser.frequencyBinCount);
+    recDest = ac.createMediaStreamDestination();
   }
   function connect(node, audible) {
     ensureAudio();
     if (source) source.disconnect();
     source = node;
     node.connect(analyser);
-    if (audible) node.connect(ac.destination);
+    if (audible) { node.connect(ac.destination); node.connect(recDest); }
+    sourceAudible = audible;
     ac.resume();
   }
 
@@ -113,6 +115,31 @@
   };
   if (params.get("demo") === "1") demoBeat();
 
+  // Vertical 1080x1920 recording (canvas + whatever is playing) for TikTok / Reels / Shorts.
+  var recorder = null, recSize = null;
+  $("rec").onclick = function () {
+    if (recorder) { recorder.stop(); return; }
+    recSize = [1080, 1920];
+    document.body.classList.add("portrait");
+    var stream = canvas.captureStream(60);
+    if (recDest && sourceAudible) recDest.stream.getAudioTracks().forEach(function (t) { stream.addTrack(t); });
+    var type = ["video/webm;codecs=vp9,opus", "video/webm"].find(function (t) { return MediaRecorder.isTypeSupported(t); });
+    var chunks = [];
+    recorder = new MediaRecorder(stream, { mimeType: type, videoBitsPerSecond: 16e6 });
+    recorder.ondataavailable = function (e) { if (e.data.size) chunks.push(e.data); };
+    recorder.onstop = function () {
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob(chunks, { type: "video/webm" }));
+      a.download = "reactive-" + current.id + "-" + Date.now() + ".webm";
+      a.click();
+      recorder = null; recSize = null;
+      document.body.classList.remove("portrait");
+      $("rec").classList.remove("on"); $("rec").textContent = "⏺ Record 9:16";
+    };
+    recorder.start(250);
+    $("rec").classList.add("on"); $("rec").textContent = "⏹ Stop";
+  };
+
   // 16 log-spaced bands, 40 Hz – 14 kHz, like cava's layout.
   var raw = new Array(BANDS).fill(0);
   function readBands() {
@@ -135,7 +162,8 @@
   var start = performance.now(), last = start;
   function frame(now) {
     var dt = (now - last) / 1000; last = now;
-    var w = Math.floor(canvas.clientWidth * devicePixelRatio), h = Math.floor(canvas.clientHeight * devicePixelRatio);
+    var w = recSize ? recSize[0] : Math.floor(canvas.clientWidth * devicePixelRatio);
+    var h = recSize ? recSize[1] : Math.floor(canvas.clientHeight * devicePixelRatio);
     if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
     readBands();
     var s = rdAnalyse(state, raw, dt);
