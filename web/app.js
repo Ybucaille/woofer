@@ -82,7 +82,9 @@
   if (params.get("ui") === "0") toggleUi();
 
   // ---- audio
-  var ac = null, analyser = null, freq = null, source = null, recDest = null, sourceAudible = false;
+  var ac = null, analyser = null, freq = null, source = null, recDest = null, sourceAudible = false, out = null;
+  // ?mute=1 keeps analysing and recording audio but sends nothing to the speakers.
+  var muted = params.get("mute") === "1";
   function ensureAudio() {
     if (ac) return;
     ac = new AudioContext();
@@ -91,13 +93,19 @@
     analyser.smoothingTimeConstant = 0.5;
     freq = new Uint8Array(analyser.frequencyBinCount);
     recDest = ac.createMediaStreamDestination();
+    out = ac.createGain();
+    out.gain.value = muted ? 0 : 1;
+    out.connect(ac.destination);
   }
+  function showMute() { $("mute").textContent = muted ? "🔇 Muted" : "🔊 Sound"; }
+  $("mute").onclick = function () { muted = !muted; if (out) out.gain.value = muted ? 0 : 1; showMute(); };
+  showMute();
   function connect(node, audible) {
     ensureAudio();
     if (source) source.disconnect();
     source = node;
     node.connect(analyser);
-    if (audible) { node.connect(ac.destination); node.connect(recDest); }
+    if (audible) { node.connect(out); node.connect(recDest); }
     sourceAudible = audible;
     ac.resume();
   }
