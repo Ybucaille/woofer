@@ -1,0 +1,48 @@
+# Maintainer: Ybucaille
+pkgname=woofer-git
+_pkgname=woofer
+pkgver=r0.0000000
+pkgrel=1
+pkgdesc="Your wallpaper, but alive: an audio-reactive wallpaper daemon for layer-shell Wayland compositors"
+arch=('x86_64' 'aarch64')
+url="https://github.com/Ybucaille/woofer"
+license=('MIT')
+depends=('pipewire' 'vulkan-icd-loader' 'gcc-libs' 'glibc')
+makedepends=('git' 'cargo' 'clang')
+optdepends=('vulkan-intel: Intel GPUs' 'vulkan-radeon: AMD GPUs' 'nvidia-utils: NVIDIA GPUs')
+provides=("$_pkgname")
+conflicts=("$_pkgname")
+source=("$_pkgname::git+$url.git")
+sha256sums=('SKIP')
+
+pkgver() {
+    cd "$_pkgname"
+    printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short=7 HEAD)"
+}
+
+prepare() {
+    cd "$_pkgname/daemon"
+    export RUSTUP_TOOLCHAIN=stable
+    cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+    cd "$_pkgname/daemon"
+    export RUSTUP_TOOLCHAIN=stable CARGO_TARGET_DIR=target
+    cargo build --frozen --release
+}
+
+check() {
+    cd "$_pkgname/daemon"
+    export RUSTUP_TOOLCHAIN=stable CARGO_TARGET_DIR=target
+    cargo test --frozen --release
+}
+
+package() {
+    cd "$_pkgname"
+    install -Dm755 daemon/target/release/woofer "$pkgdir/usr/bin/woofer"
+    install -dm755 "$pkgdir/usr/share/woofer/shaders"
+    install -m644 shaders/*.glsl shaders/CONTRACT.md "$pkgdir/usr/share/woofer/shaders/"
+    install -Dm644 README.md "$pkgdir/usr/share/doc/$_pkgname/README.md"
+    install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

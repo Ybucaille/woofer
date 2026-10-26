@@ -1,0 +1,154 @@
+<h1 align="center">Woofer</h1>
+
+<p align="center">
+  <!-- TODO before release: record docs/hero.gif (6–10 s loop, ≤ 8 MB) -->
+  <img src="docs/hero.gif" alt="A wallpaper breathing and rippling with the music" width="800">
+</p>
+
+<p align="center"><b>Your wallpaper, but alive.</b><br>
+A music-reactive wallpaper daemon for Wayland. Keep your favourite image: it breathes on the bass,
+ripples on the beat, and drifts gently when it's quiet.</p>
+
+<p align="center">
+  <a href="https://ybucaille.github.io/woofer/web/">Browser demo</a> ·
+  <a href="shaders/CONTRACT.md">Write an effect</a> ·
+  <a href="{{KOFI_URL}}">Support on Ko-fi</a>
+</p>
+
+---
+
+## Features
+
+- **Your own wallpaper, animated**: it breathes like a speaker cone, ripples on each kick, splits RGB for a blink,
+  or shimmers in a heat haze. 5 wallpaper effects plus 8 generative backgrounds.
+- **Any wlr-layer-shell compositor**: Hyprland, Sway, niri, river… (only Hyprland is tested so far, reports welcome).
+- **Direct PipeWire capture**: no cava, no extra process. FFT, bass / mid / high, kick detection, 16-band spectrum.
+- **Light**: draws only on frame callbacks, drops to 10 fps (or 0) after 2 s of silence, and pauses outputs that show
+  a fullscreen window (Hyprland). Measured below.
+- **Follows your theme**: with Caelestia, the wallpaper and Material You colours are followed live.
+- **Live control**: `woofer ctl preset ripple`, no restart.
+- **One-file effects**: a Shadertoy-style `.glsl` runs in the daemon, the Quickshell module and the browser preview.
+
+## Performance
+
+Measured on an i7-11800H laptop, Intel UHD, 1080p, preset `pulse` ([method and details](daemon/BENCH.md)):
+
+| | CPU (% of one core) | RAM (RSS) |
+|---|---|---|
+| silence | 0.48 % (0 % with `--idle-fps 0`) | 29 MB |
+| music, 60 fps | 3.0 % | 29 MB |
+| music, 30 fps | 1.8 % | 29 MB |
+| paused | 0.08 % | 29 MB |
+
+About 12 MB of the RSS are the Vulkan driver and system libraries, which every Vulkan client maps.
+A raw Vulkan backend to go under 1 % with music is on the [roadmap](ROADMAP.md).
+
+## Install
+
+From source, until packages exist (AUR planned):
+
+```bash
+# Arch: sudo pacman -S --needed rust clang pipewire vulkan-icd-loader  (+ vulkan-intel / vulkan-radeon / nvidia-utils)
+git clone https://github.com/Ybucaille/woofer && cd woofer
+cargo install --path daemon --locked
+mkdir -p ~/.local/share/woofer && cp -r shaders ~/.local/share/woofer/
+```
+
+Requirements: a Wayland compositor with wlr-layer-shell, PipeWire, a Vulkan driver.
+
+## Usage
+
+```bash
+woofer --wallpaper ~/Pictures/wall.jpg --preset woofer
+woofer --wallpaper caelestia          # follow Caelestia's wallpaper and colours
+woofer ctl preset ripple              # switch on the fly
+woofer ctl intensity 0.6
+woofer ctl pause | resume | status
+```
+
+Autostart: `exec-once = woofer --wallpaper ~/Pictures/wall.jpg` (Hyprland), `exec woofer …` (Sway).
+If another tool already draws your wallpaper on the background layer (swww, hyprpaper, Caelestia), stop its
+wallpaper or run Woofer with `--layer bottom`.
+
+Main flags: `--preset`, `--intensity`, `--fps` (60), `--idle-fps` (10, `0` = stop in silence), `--scale` (render
+scale), `--gpu low|high`, `--source <node>`. All of them: [daemon/README.md](daemon/README.md).
+
+## Presets
+
+| id | |
+|---|---|
+| **Wallpaper effects** | |
+| `woofer` | Your wallpaper as a speaker cone: the bass pushes it out, every kick makes it ring |
+| `ripple` | Each kick drops a stone in your wallpaper: one clean ring travels out from the centre and fades |
+| `glitch` | Untouched until a kick lands: a brief RGB split and a few slipped slices, then calm |
+| `drift` | A barely-there breeze moves through your wallpaper; the mids turn it into gusts |
+| `heat` | Heat haze rising off your wallpaper, shimmering harder with the highs |
+| **Over your wallpaper** | |
+| `aurora` | Northern-light curtains rippling and brightening with the mids |
+| `bokeh` | Out-of-focus lights, each one breathing with its own slice of the spectrum |
+| `chrome` | Mirror-polished metal blobs reflecting your wallpaper, swelling on the bass |
+| `shards` | Your wallpaper through faceted glass: kicks crack it open, highs glint on the bevels |
+| **Generative** | |
+| `nebula` | Slow cosmic clouds that bloom on every kick while stars catch the highs |
+| `synthwave` | Retro sunset over a neon grid, with a mountain range drawn by the spectrum |
+| `ribbon` | A single glowing silk ribbon whose waves are drawn by the spectrum |
+| `pulse` | Soft concentric rings that breathe with the bass |
+
+Try them all in the [browser demo](https://ybucaille.github.io/woofer/web/) with your own picture and music.
+
+## Write your own effect
+
+One file `shaders/<id>.glsl`:
+
+```glsl
+// @name My Effect
+// @description One line shown in the picker
+// @author you
+
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+    vec2 uv = fragCoord / iResolution;
+    uv += (uv - 0.5) * -0.02 * uBass * uIntensity;   // push the picture out on the bass
+    fragColor = vec4(wall(uv).rgb, 1.0);
+}
+```
+
+Uniforms (`uBass`, `uBeat`, the spectrum, theme colours…), helpers and taste rules are in
+**[shaders/CONTRACT.md](shaders/CONTRACT.md)**. `node tools/build.mjs --check` validates it, and
+`python -m http.server` then `web/` previews it. PRs welcome.
+
+## Quickshell / Caelestia module
+
+The same presets as a Quickshell layer behind your windows, if you'd rather stay inside Quickshell
+(needs `cava` and `qt6-shadertools`):
+
+```bash
+./install.sh                                         # builds the presets for Qt
+qs -p quickshell/shell.qml
+WOOFER_PRESET=nebula WOOFER_SCALE=0.75 qs -p quickshell/shell.qml
+qs -p quickshell/shell.qml ipc call woofer setPreset ripple
+```
+
+`WOOFER_INTENSITY` sets reactivity, `WOOFER_COLORS=default` ignores the Caelestia colours.
+
+## FAQ
+
+**Wayland only?** Yes, it is a layer-shell client. GNOME and KDE are not targeted.
+
+**NVIDIA?** It prefers the integrated GPU by default (`--gpu high` picks the discrete one). It is developed on Intel.
+NVIDIA reports are welcome: open an issue with your driver version.
+
+**Battery?** In silence it draws next to nothing, and `--idle-fps 0` stops drawing completely until sound returns.
+`--fps 30` almost halves the cost with music.
+
+**What does it listen to?** Your system output through PipeWire, as a passive node that never keeps the sink awake.
+`--source` picks another sink.
+
+## Support
+
+Woofer is a free hobby project and will stay free. If it made your desktop a bit nicer and you'd like to say
+thanks, you can [buy me a coffee on Ko-fi]({{KOFI_URL}}). There's also a small premium pack, and commissions if
+you'd like an effect made for you. A star, a screenshot or an issue helps just as much.
+
+## Licence
+
+{{LICENCE}}. Made by [Ybucaille](https://github.com/Ybucaille).
