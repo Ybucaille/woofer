@@ -74,4 +74,4 @@ Then in the repository settings: Pages → Source → GitHub Actions. The site l
 ## Credits
 
 Wallpaper: “Cosmic Cliffs” in the Carina Nebula, James Webb Space Telescope.
-Credit: NASA, ESA, CSA, and STScI, CC BY 4.0 (https://esawebb.org/images/weic2205a/).
+Credit: NASA, ESA, CSA, and STScI, CC BY 4.0 (https://esawebb.org/images/weic2205b/).

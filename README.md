@@ -9,6 +9,7 @@ A music-reactive wallpaper daemon for Wayland. Keep your favourite image: it bre
 ripples on the beat, and drifts gently when it's quiet.</p>
 
 <p align="center">
+  <a href="https://ybucaille.github.io/woofer/">Website</a> ·
   <a href="#browser-preview">Browser preview</a> ·
   <a href="shaders/CONTRACT.md">Write an effect</a> ·
   <a href="https://ko-fi.com/pivuche">Support on Ko-fi</a>
