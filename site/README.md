@@ -28,7 +28,7 @@ node tools/build.mjs && site/sync.sh
 ## Re-recording a clip
 
 Clips are recorded with the browser preview (`python -I tools/devserver.py 4421`, then
-`/web/?mute=1&rec=wide&save=put&wall=local/gif/cosmic-cliffs.jpg&colors=ff2a6d,05d9e8,ffb800&seq=<id>:5:<intensity>&preset=<id>`,
+`/web/?mute=1&rec=wide&save=put&wall=local/gif/cosmic-cliffs.jpg&colors=00e5ff,ff00a8,ff7a3d&seq=<id>:5:<intensity>&preset=<id>`,
 click Record with the page visible). The recording keeps alpha, so presets that draw over the wallpaper are composited
 back onto it, then cut to 8 beats at 124 bpm with a 0.4 s crossfade so the loop is seamless:
 

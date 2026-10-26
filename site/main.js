@@ -3,19 +3,19 @@
   "use strict";
   // Descriptions are the @description lines of shaders/<id>.glsl.
   var EFFECTS = [
-    { id: "glitch", name: "Glitch", tag: "Wallpaper effect", c: "#ff2a6d",
+    { id: "glitch", name: "Glitch", tag: "Wallpaper effect", c: "#ff00a8",
       desc: "Your wallpaper, untouched until a kick lands: a brief RGB split and a few slipped slices, then calm" },
-    { id: "shards", name: "Shards", tag: "Over your wallpaper", c: "#05d9e8",
+    { id: "shards", name: "Shards", tag: "Over your wallpaper", c: "#00e5ff",
       desc: "Your wallpaper seen through faceted glass: each shard bends it a little, kicks crack it open, highs glint on the bevels" },
-    { id: "nebula", name: "Nebula", tag: "Generative", c: "#ff2a6d",
+    { id: "nebula", name: "Nebula", tag: "Generative", c: "#ff00a8",
       desc: "Slow cosmic clouds folding into themselves; they bloom on every kick while stars catch the highs" },
-    { id: "synthwave", name: "Synthwave", tag: "Generative", c: "#ffb800",
+    { id: "synthwave", name: "Synthwave", tag: "Generative", c: "#ff7a3d",
       desc: "Retro sunset over a neon grid, with a mountain range drawn by the spectrum" },
-    { id: "woofer", name: "Woofer", tag: "Wallpaper effect", c: "#05d9e8",
+    { id: "woofer", name: "Woofer", tag: "Wallpaper effect", c: "#00e5ff",
       desc: "Your wallpaper as a speaker cone: the bass pushes it out, every kick makes it ring" },
-    { id: "ripple", name: "Ripple", tag: "Wallpaper effect", c: "#ffb800",
+    { id: "ripple", name: "Ripple", tag: "Wallpaper effect", c: "#ff7a3d",
       desc: "Each kick drops a stone in your wallpaper: one clean ring travels out from the centre and fades" },
-    { id: "aurora", name: "Aurora", tag: "Over your wallpaper", c: "#ff2a6d",
+    { id: "aurora", name: "Aurora", tag: "Over your wallpaper", c: "#ff00a8",
       desc: "Northern-light curtains drifting over your wallpaper, rippling and brightening with the mids" }
   ];
   var reduce = matchMedia("(prefers-reduced-motion: reduce)");

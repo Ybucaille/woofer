@@ -156,7 +156,7 @@
       raw[b] = Math.pow(m / 255, 2);
     }
   }
-  var COLORS = [[1, 0.165, 0.427, 1], [0.02, 0.851, 0.91, 1], [1, 0.722, 0, 1]]; // ff2a6d, 05d9e8, ffb800
+  var COLORS = [[0, 0.898, 1, 1], [1, 0, 0.659, 1], [1, 0.478, 0.239, 1]]; // 00e5ff, ff00a8, ff7a3d
   var running = false, onScreen = true, start = performance.now(), last = start;
   new IntersectionObserver(function (en) {
     onScreen = en[0].isIntersecting;
