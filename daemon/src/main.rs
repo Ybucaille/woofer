@@ -89,6 +89,7 @@ OPTIONS:
     --shaders <dir>        preset directory [default: XDG data dir, /usr/share, or the source checkout]
     --stats                log fps, render CPU time and mode every 5 s
     -h, --help             this text
+    -V, --version          print the version
 ";
 
 struct Args {
@@ -171,6 +172,10 @@ fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.iter().any(|a| a == "-h" || a == "--help") {
         print!("{USAGE}");
+        return ExitCode::SUCCESS;
+    }
+    if args.iter().any(|a| a == "-V" || a == "--version") {
+        println!("woofer {}", env!("CARGO_PKG_VERSION"));
         return ExitCode::SUCCESS;
     }
     if args.first().map(String::as_str) == Some("ctl") {

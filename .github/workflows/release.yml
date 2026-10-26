@@ -1,0 +1,69 @@
+name: Release
+# Pushing a tag vX.Y.Z builds the Linux x86_64 binary and publishes a GitHub Release whose notes are that
+# version's CHANGELOG section. Run it by hand (workflow_dispatch) for a dry run: same build, artifact only.
+on:
+  push: { tags: ["v*"] }
+  workflow_dispatch:
+permissions: { contents: write }
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: System libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            pkg-config clang libclang-dev libpipewire-0.3-dev libspa-0.2-dev libwayland-dev
+
+      - name: Rust
+        run: rustup toolchain install stable --profile minimal && rustup default stable
+
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: daemon }
+
+      - name: Version
+        id: v
+        run: |
+          crate=$(sed -n 's/^version = "\(.*\)"/\1/p' daemon/Cargo.toml | head -1)
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            [[ "$GITHUB_REF_NAME" == "v$crate" ]] || { echo "tag $GITHUB_REF_NAME != Cargo version $crate"; exit 1; }
+            echo "name=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=v$crate-dev.${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Test
+        working-directory: daemon
+        run: cargo test --release --locked
+
+      - name: Build
+        working-directory: daemon
+        run: cargo build --release --locked
+
+      - name: Package
+        run: |
+          name=woofer-${{ steps.v.outputs.name }}-x86_64-linux
+          mkdir -p "dist/$name/shaders"
+          cp daemon/target/release/woofer "dist/$name/"
+          cp shaders/*.glsl shaders/CONTRACT.md "dist/$name/shaders/"
+          cp README.md LICENSE CHANGELOG.md packaging/release/install.sh "dist/$name/"
+          tar -C dist -czf "dist/$name.tar.gz" "$name"
+          (cd dist && sha256sum "$name.tar.gz" > "$name.tar.gz.sha256")
+          "dist/$name/woofer" --version
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: woofer-${{ steps.v.outputs.name }}
+          path: dist/*.tar.gz*
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/')
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          ver=${GITHUB_REF_NAME#v}
+          awk -v v="$ver" '$0 ~ "^## \\[" v "\\]" {on=1; next} /^## \[/ {on=0} /^\[.*\]: http/ {next} on' CHANGELOG.md > notes.md
+          [ -s notes.md ] || { echo "no CHANGELOG section for $ver"; exit 1; }
+          gh release create "$GITHUB_REF_NAME" --title "Woofer $GITHUB_REF_NAME" --notes-file notes.md dist/*.tar.gz dist/*.sha256
