@@ -1,7 +1,7 @@
 <h1 align="center">Woofer</h1>
 
 <p align="center">
-  <!-- hero GIF coming: docs/hero.gif -->
+  <img src="docs/hero.webp" alt="Woofer: a wallpaper glitching on each kick, seen through shattered glass, then a synthwave sunset, all driven by the music" width="800">
 </p>
 
 <p align="center"><b>Your wallpaper, but alive.</b><br>
@@ -161,3 +161,6 @@ you'd like an effect made for you. A star, a screenshot or an issue helps just a
 ## Licence
 
 [MIT](LICENSE). Made by [Ybucaille](https://github.com/Ybucaille).
+
+Demo wallpaper in the animation above: "Cosmic Cliffs" in the Carina Nebula, James Webb Space Telescope.
+Credit: NASA, ESA, CSA, and STScI ([CC BY 4.0](https://esawebb.org/copyright/)). Shown with Woofer's effects applied.

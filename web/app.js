@@ -1,5 +1,8 @@
 // Browser preview: same presets and same analysis as the Quickshell layer.
-// Query params: ?preset=<id>&demo=1&ui=0&intensity=1
+// Query params: ?preset=<id>&demo=1&ui=0&intensity=1&mute=1&wall=<url>
+// Scripted recording: &rec=wide (1280x720, default 9:16) &seq=glitch:4:1.8,shards:4 (preset:seconds[:intensity],
+// stops by itself) &colors=ff2a6d,05d9e8,ffb800 (theme colours as hex)
+// &save=put (PUT the clip to the dev server instead of downloading it)
 (function () {
   "use strict";
   var BANDS = 16;
@@ -155,10 +158,29 @@
 
   // Vertical 1080x1920 recording (canvas + whatever is playing) for TikTok / Reels / Shorts.
   var recorder = null, recSize = null;
+  var wide = params.get("rec") === "wide";
+  var recLabel = wide ? "⏺ Record 16:9" : "⏺ Record 9:16";
+  $("rec").textContent = recLabel;
+  var seq = (params.get("seq") || "").split(",").filter(Boolean).map(function (x) {
+    var p = x.split(":"); return { id: p[0], secs: parseFloat(p[1] || "4"), intensity: p[2] ? parseFloat(p[2]) : null };
+  });
+  function selectPreset(id) {
+    var p = presets.find(function (q) { return q.id === id; });
+    if (p) { current = p; sel.value = id; showDesc(); }
+  }
+  function saveClip(blob, name) {
+    if (params.get("save") !== "put") {
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob); a.download = name; a.click();
+      return;
+    }
+    fetch("local/gif/" + name, { method: "PUT", body: blob }).then(function (r) { window.__rd.saved = r.ok ? name : "error " + r.status; });
+  }
   $("rec").onclick = function () {
     if (recorder) { recorder.stop(); return; }
-    recSize = [1080, 1920];
-    document.body.classList.add("portrait");
+    if (seq.length && !source) demoBeat();
+    recSize = wide ? [1280, 720] : [1080, 1920];
+    if (!wide) document.body.classList.add("portrait");
     var stream = canvas.captureStream(60);
     if (recDest && sourceAudible) recDest.stream.getAudioTracks().forEach(function (t) { stream.addTrack(t); });
     var type = ["video/webm;codecs=vp9,opus", "video/webm"].find(function (t) { return MediaRecorder.isTypeSupported(t); });
@@ -166,16 +188,21 @@
     recorder = new MediaRecorder(stream, { mimeType: type, videoBitsPerSecond: 16e6 });
     recorder.ondataavailable = function (e) { if (e.data.size) chunks.push(e.data); };
     recorder.onstop = function () {
-      var a = document.createElement("a");
-      a.href = URL.createObjectURL(new Blob(chunks, { type: "video/webm" }));
-      a.download = "woofer-" + current.id + "-" + Date.now() + ".webm";
-      a.click();
+      saveClip(new Blob(chunks, { type: "video/webm" }), "woofer-" + current.id + "-" + Date.now() + ".webm");
       recorder = null; recSize = null;
       document.body.classList.remove("portrait");
-      $("rec").classList.remove("on"); $("rec").textContent = "⏺ Record 9:16";
+      $("rec").classList.remove("on"); $("rec").textContent = recLabel;
     };
     recorder.start(250);
     $("rec").classList.add("on"); $("rec").textContent = "⏹ Stop";
+    if (seq.length) {
+      var t = 0;
+      seq.forEach(function (step) {
+        setTimeout(function () { selectPreset(step.id); if (step.intensity !== null) intensity = step.intensity; }, t * 1000);
+        t += step.secs;
+      });
+      setTimeout(function () { if (recorder) recorder.stop(); }, t * 1000);
+    }
   };
 
   // 16 log-spaced bands, 40 Hz – 14 kHz, like cava's layout.
@@ -197,6 +224,10 @@
   var state = rdCreateState(BANDS);
   window.__rd = { state: state }; // for automated checks
   var COLORS = [[0.65, 0.78, 1, 1], [0.84, 0.75, 0.89, 1], [1, 0.71, 0.67, 1]];
+  (params.get("colors") || "").split(",").forEach(function (hex, i) {
+    if (/^[0-9a-f]{6}$/i.test(hex) && i < 3)
+      COLORS[i] = [0, 2, 4].map(function (o) { return parseInt(hex.substr(o, 2), 16) / 255; }).concat([1]);
+  });
   var start = performance.now(), last = start;
   function frame(now) {
     var dt = (now - last) / 1000; last = now;
