@@ -2,7 +2,7 @@
 // Keep it plain JS with no module syntax so both runtimes can load it.
 
 function rdCreateState(bands) {
-    var s = { bands: bands, spec: [], slowBass: 0, peak: 0.2, beat: 0, sinceBeat: 1, flow: 0,
+    var s = { bands: bands, spec: [], prevBass: 0, riseAvg: 0, peak: 0.2, beat: 0, sinceBeat: 1, flow: 0,
               bass: 0, mid: 0, high: 0, level: 0 };
     for (var i = 0; i < bands; i++) s.spec.push(0);
     return s;
@@ -35,16 +35,20 @@ function rdAnalyse(s, raw, dt) {
     s.high = rdAvg(s.spec, Math.round(n * 0.55) + 1, n);
     s.level = rdAvg(s.spec, 0, n);
 
-    // Kick detection: fast bass rising well above its slow average.
-    var fastBass = rdAvg(raw, 0, Math.round(n * 0.15)) / s.peak;
+    // Kick detection: how fast the bass rises (per second, so frame-rate independent) compared with its
+    // running average. A level threshold missed most kicks over a sustained bassline. The 0.3 s refractory
+    // period keeps off-beat bass notes from doubling the beat (fine up to ~200 bpm).
+    var bassNow = rdAvg(raw, 0, Math.round(n * 0.15)) / s.peak;
+    var rise = Math.max(0, bassNow - s.prevBass) / dt;
+    s.prevBass = bassNow;
     s.sinceBeat += dt;
-    if (fastBass > s.slowBass * 1.35 + 0.06 && s.sinceBeat > 0.18) {
+    if (rise > s.riseAvg * 2.5 + 2.0 && s.sinceBeat > 0.3) {
         s.beat = 1;
         s.sinceBeat = 0;
     } else {
         s.beat *= Math.exp(-dt * 7);
     }
-    s.slowBass += (fastBass - s.slowBass) * (1 - Math.exp(-dt * 2));
+    s.riseAvg += (rise - s.riseAvg) * (1 - Math.exp(-dt * 1));
 
     s.flow += dt * (0.3 + 1.6 * s.level);
     return s;
