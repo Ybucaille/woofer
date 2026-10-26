@@ -41,12 +41,12 @@ GNOME and KDE are not targeted.
 
 ### Download and run
 
-Get the **Linux x86_64** binary from [Woofer v0.1.0](https://github.com/Ybucaille/woofer/releases/tag/v0.1.0):
+Get the **Linux x86_64** binary from [Woofer v0.1.1](https://github.com/Ybucaille/woofer/releases/tag/v0.1.1):
 
 ```bash
-curl -fLO https://github.com/Ybucaille/woofer/releases/download/v0.1.0/woofer-v0.1.0-x86_64-linux.tar.gz
-tar -xzf woofer-v0.1.0-x86_64-linux.tar.gz
-./woofer-v0.1.0-x86_64-linux/install.sh
+curl -fLO https://github.com/Ybucaille/woofer/releases/download/v0.1.1/woofer-v0.1.1-x86_64-linux.tar.gz
+tar -xzf woofer-v0.1.1-x86_64-linux.tar.gz
+./woofer-v0.1.1-x86_64-linux/install.sh
 ```
 
 The installer places the binary in `~/.local/bin` and the presets in `~/.local/share/woofer/shaders`

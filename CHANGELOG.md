@@ -3,7 +3,7 @@
 All notable changes to Woofer are listed here. Versions follow [Semantic Versioning](https://semver.org/):
 while Woofer is 0.x, a minor version (0.2.0) may change flags, `ctl` commands or the preset contract.
 
-## [Unreleased]
+## [0.1.1] - 2026-10-27
 
 ### Fixed
 
@@ -50,4 +50,5 @@ First release: your wallpaper, but alive.
 - An off-beat bass note louder than ~80 % of the kick can take the first beat after a bass-only intro;
   the detector locks back onto the kick within a beat.
 
+[0.1.1]: https://github.com/Ybucaille/woofer/releases/tag/v0.1.1
 [0.1.0]: https://github.com/Ybucaille/woofer/releases/tag/v0.1.0
