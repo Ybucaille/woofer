@@ -45,7 +45,17 @@ A raw Vulkan backend to go under 1 % with music is on the [roadmap](ROADMAP.md).
 
 ## Install
 
-From source, until packages exist (AUR planned):
+**Prebuilt binary** (Linux x86_64), from the [latest release](https://github.com/Ybucaille/woofer/releases/latest):
+
+```bash
+curl -LO https://github.com/Ybucaille/woofer/releases/download/v0.1.0/woofer-v0.1.0-x86_64-linux.tar.gz
+tar -xzf woofer-v0.1.0-x86_64-linux.tar.gz && ./woofer-v0.1.0-x86_64-linux/install.sh
+```
+
+It installs `~/.local/bin/woofer` and the presets in `~/.local/share/woofer/shaders`. It needs PipeWire and a
+Vulkan driver (`vulkan-intel`, `vulkan-radeon` or `nvidia-utils` on Arch).
+
+**From source** (AUR package planned):
 
 ```bash
 # Arch: sudo pacman -S --needed rust clang pipewire vulkan-icd-loader  (+ vulkan-intel / vulkan-radeon / nvidia-utils)
