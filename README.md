@@ -1,8 +1,7 @@
 <h1 align="center">Woofer</h1>
 
 <p align="center">
-  <!-- TODO before release: record docs/hero.gif (6–10 s loop, ≤ 8 MB) -->
-  <img src="docs/hero.gif" alt="A wallpaper breathing and rippling with the music" width="800">
+  <!-- hero GIF coming: docs/hero.gif -->
 </p>
 
 <p align="center"><b>Your wallpaper, but alive.</b><br>
@@ -10,9 +9,9 @@ A music-reactive wallpaper daemon for Wayland. Keep your favourite image: it bre
 ripples on the beat, and drifts gently when it's quiet.</p>
 
 <p align="center">
-  <a href="https://ybucaille.github.io/woofer/web/">Browser demo</a> ·
+  <a href="#browser-preview">Browser preview</a> ·
   <a href="shaders/CONTRACT.md">Write an effect</a> ·
-  <a href="{{KOFI_URL}}">Support on Ko-fi</a>
+  <a href="https://ko-fi.com/pivuche">Support on Ko-fi</a>
 </p>
 
 ---
@@ -94,7 +93,7 @@ scale), `--gpu low|high`, `--source <node>`. All of them: [daemon/README.md](dae
 | `ribbon` | A single glowing silk ribbon whose waves are drawn by the spectrum |
 | `pulse` | Soft concentric rings that breathe with the bass |
 
-Try them all in the [browser demo](https://ybucaille.github.io/woofer/web/) with your own picture and music.
+Try them all in the [browser preview](#browser-preview) with your own picture and music.
 
 ## Write your own effect
 
@@ -113,8 +112,18 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 ```
 
 Uniforms (`uBass`, `uBeat`, the spectrum, theme colours…), helpers and taste rules are in
-**[shaders/CONTRACT.md](shaders/CONTRACT.md)**. `node tools/build.mjs --check` validates it, and
-`python -m http.server` then `web/` previews it. PRs welcome.
+**[shaders/CONTRACT.md](shaders/CONTRACT.md)**. `node tools/build.mjs --check` validates it, and the
+[browser preview](#browser-preview) shows it. PRs welcome.
+
+## Browser preview
+
+Every preset also runs in the browser, with a demo beat, your mic or an audio file, your own wallpaper,
+and a 9:16 recorder for short videos:
+
+```bash
+node tools/build.mjs
+python -m http.server 4420 --bind 127.0.0.1    # then open http://127.0.0.1:4420/web/
+```
 
 ## Quickshell / Caelestia module
 
@@ -146,9 +155,9 @@ NVIDIA reports are welcome: open an issue with your driver version.
 ## Support
 
 Woofer is a free hobby project and will stay free. If it made your desktop a bit nicer and you'd like to say
-thanks, you can [buy me a coffee on Ko-fi]({{KOFI_URL}}). There's also a small premium pack, and commissions if
+thanks, you can [buy me a coffee on Ko-fi](https://ko-fi.com/pivuche). There's also a small premium pack, and commissions if
 you'd like an effect made for you. A star, a screenshot or an issue helps just as much.
 
 ## Licence
 
-{{LICENCE}}. Made by [Ybucaille](https://github.com/Ybucaille).
+[MIT](LICENSE). Made by [Ybucaille](https://github.com/Ybucaille).
