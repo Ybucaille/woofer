@@ -95,7 +95,7 @@ pub fn watch(wallpaper: bool, theme: bool, tx: impl Fn(Change) + Send + 'static)
     }
     let dir = caelestia_dir();
     std::thread::Builder::new()
-        .name("rd-watch".into())
+        .name("woofer-watch".into())
         .spawn(move || {
             use inotify::{Inotify, WatchMask};
             let Ok(mut ino) = Inotify::init() else { return };

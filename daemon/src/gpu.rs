@@ -48,7 +48,7 @@ impl Gpu {
         };
         let immediates = frame_binding == FrameBinding::Immediates;
         let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
-            label: Some("reactive-desktop"),
+            label: Some("woofer"),
             required_features: if immediates { wgpu::Features::IMMEDIATES } else { wgpu::Features::empty() },
             required_limits: wgpu::Limits {
                 max_immediate_size: if immediates { frame_size } else { 0 },

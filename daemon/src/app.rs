@@ -403,7 +403,7 @@ impl App {
                 return;
             }
         };
-        let layer = self.layer_shell.create_layer_surface(qh, wl, self.settings.layer, Some("reactive-desktop"), Some(&output));
+        let layer = self.layer_shell.create_layer_surface(qh, wl, self.settings.layer, Some("woofer"), Some(&output));
         layer.set_anchor(Anchor::all());
         layer.set_exclusive_zone(-1);
         layer.set_keyboard_interactivity(KeyboardInteractivity::None);

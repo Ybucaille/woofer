@@ -59,7 +59,7 @@ const EVENTS: &[&str] = &[
 pub fn spawn(tx: impl Fn(Fullscreen) + Send + 'static) -> bool {
     let Some(dir) = socket_dir() else { return false };
     std::thread::Builder::new()
-        .name("rd-hypr".into())
+        .name("woofer-hypr".into())
         .spawn(move || {
             loop {
                 if let Some(s) = snapshot(&dir) {

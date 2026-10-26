@@ -1,4 +1,4 @@
-# Benchmarks
+# Woofer benchmarks
 
 Honest numbers, measured on the author's laptop. Reproduce with `bench/bench.sh` (method below).
 
@@ -81,9 +81,11 @@ per-submit tracking is the largest single item above. That is a large rewrite, n
 
 `bench/bench.sh [seconds-per-phase] -- [daemon flags]`:
 
-1. Creates a temporary PipeWire null sink `rd-bench` and starts the daemon with `--audio-target rd-bench --stats`
-   under `timeout` (it is always killed at the end, and the sink destroyed). Sound goes to that sink, so the test
-   is inaudible and unaffected by whatever else is playing.
+1. **Silent test**: loads a virtual sink with
+   `pactl load-module module-null-sink sink_name=woofer_test sink_properties=device.description=woofer_test`,
+   plays into it with `pw-play --target woofer_test`, and starts the daemon with `--source woofer_test --stats`
+   under `timeout`. Nothing reaches the speakers, the default sink is never changed, and the result does not depend
+   on what else is playing. On exit the daemon is killed and the module unloaded (`pactl unload-module <id>`).
 2. Waits 6 s (startup, then 2 s of silence so the daemon reaches its idle rate), then measures four phases:
    nothing playing; `pw-play` of a silent WAV; `pw-play` of the beat from `bench/make-beat.py` (same recipe as
    the web preview's demo beat); and `ctl pause` with the beat still playing.

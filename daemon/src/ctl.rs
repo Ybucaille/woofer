@@ -1,4 +1,4 @@
-//! `reactive-desktop ctl …`: one line per connection over a unix socket in $XDG_RUNTIME_DIR.
+//! `woofer ctl …`: one line per connection over a unix socket in $XDG_RUNTIME_DIR.
 
 use std::io::{BufRead, BufReader, Read, Write};
 use std::os::unix::net::{UnixListener, UnixStream};
@@ -8,7 +8,7 @@ use std::time::Duration;
 
 pub fn socket_path() -> PathBuf {
     let dir = std::env::var_os("XDG_RUNTIME_DIR").map(PathBuf::from).unwrap_or_else(std::env::temp_dir);
-    dir.join("reactive-desktop.sock")
+    dir.join("woofer.sock")
 }
 
 #[derive(Debug)]
@@ -49,7 +49,7 @@ pub fn serve(tx: impl Fn(Request) + Send + 'static) -> Result<(), String> {
     let _ = std::fs::remove_file(&path);
     let listener = UnixListener::bind(&path).map_err(|e| format!("{}: {e}", path.display()))?;
     std::thread::Builder::new()
-        .name("rd-ctl".into())
+        .name("woofer-ctl".into())
         .spawn(move || {
             for conn in listener.incoming().flatten() {
                 let _ = conn.set_read_timeout(Some(Duration::from_secs(2)));

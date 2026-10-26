@@ -1,4 +1,4 @@
-# reactive-desktop daemon
+# Woofer daemon
 
 Your wallpaper, but alive: a small Rust daemon that draws an audio-reactive shader preset as the wallpaper of
 every output, on any Wayland compositor with `wlr-layer-shell` (Hyprland, Sway, niri, river, Wayfire, …).
@@ -15,21 +15,21 @@ cargo build --release -j 4
 cargo test -j 4          # includes a test that compiles every preset in ../shaders through the wrapper
 ```
 
-The binary is `target/release/reactive-desktop`.
+The binary is `target/release/woofer`.
 
 ## Run
 
 ```bash
-reactive-desktop --wallpaper ~/Pictures/wall.jpg --preset pulse
-reactive-desktop --wallpaper caelestia          # follow Caelestia's wallpaper (and its colours) live
-reactive-desktop ctl preset nebula              # switch preset on the fly
-reactive-desktop ctl intensity 0.6
-reactive-desktop ctl pause | resume | status
-reactive-desktop snapshot out.png --preset ripple --wallpaper ~/Pictures/wall.jpg   # offscreen 960×540 test frame
+woofer --wallpaper ~/Pictures/wall.jpg --preset pulse
+woofer --wallpaper caelestia          # follow Caelestia's wallpaper (and its colours) live
+woofer ctl preset nebula              # switch preset on the fly
+woofer ctl intensity 0.6
+woofer ctl pause | resume | status
+woofer snapshot out.png --preset ripple --wallpaper ~/Pictures/wall.jpg   # offscreen 960×540 test frame
 ```
 
-Start it from your compositor's autostart once you're happy (e.g. `exec-once = reactive-desktop --wallpaper caelestia`
-in `hyprland.conf`, `exec reactive-desktop …` in Sway). With Caelestia or another wallpaper tool also on the
+Start it from your compositor's autostart once you're happy (e.g. `exec-once = woofer --wallpaper caelestia`
+in `hyprland.conf`, `exec woofer …` in Sway). With Caelestia or another wallpaper tool also on the
 background layer, either stop that tool's wallpaper or use `--layer bottom`, which draws transparently above it
 (`wall()` still samples `--wallpaper`).
 
@@ -44,11 +44,11 @@ background layer, either stop that tool's wallpaper or use `--layer bottom`, whi
 | `--scale <x>` | `1.0` | render scale (`0.5` = quarter of the pixels, upscaled by the compositor via `wp_viewporter`) |
 | `--layer <background\|bottom>` | `background` | `background` is opaque and composites the preset over the wallpaper |
 | `--gpu <low\|high>` | `low` | adapter power preference (integrated vs discrete) |
-| `--audio-target <node>` | default output | capture another sink's monitor (`node.name` from `wpctl status`/`pw-cli ls Node`) |
+| `--source <node>` | default output | capture another sink's monitor (`node.name` from `wpctl status`/`pw-cli ls Node`) |
 | `--shaders <dir>` | see below | preset directory |
 | `--stats` | off | log fps, render CPU time per frame and mode every 5 s |
 
-Presets are searched in `--shaders`, `$XDG_DATA_HOME/reactive-desktop/shaders`, `/usr/share/reactive-desktop/shaders`,
+Presets are searched in `--shaders`, `$XDG_DATA_HOME/woofer/shaders`, `/usr/share/woofer/shaders`,
 then the source checkout's `shaders/`. Logging: `RUST_LOG=debug`.
 
 ## Architecture
@@ -67,7 +67,7 @@ then the source checkout's `shaders/`. Logging: `RUST_LOG=debug`.
   then an emulation of the web preview's WebAudio analyser (4096-point FFT, Blackman window, smoothing 0.5,
   −100…−30 dB → byte, 16 log bands 40 Hz–14 kHz, max per band, squared).
 - **`analysis.rs`**: line-for-line port of `quickshell/analysis.js` (auto-gain, smoothing, band split, kick detection, `flow`).
-- **`ctl.rs`**: one-line commands over `$XDG_RUNTIME_DIR/reactive-desktop.sock`. **`hypr.rs`**, **`wallpaper.rs`**:
+- **`ctl.rs`**: one-line commands over `$XDG_RUNTIME_DIR/woofer.sock`. **`hypr.rs`**, **`wallpaper.rs`**:
   Hyprland fullscreen state and Caelestia files (inotify), each on a thread that sleeps until something happens.
 
 `cargo build --profile measure --features count-alloc` (no LTO, quick) adds an allocation counter to `--stats`;

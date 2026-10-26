@@ -89,7 +89,7 @@ impl Shared {
 /// Spawns the capture thread. It retries every few seconds if PipeWire is absent or restarts.
 pub fn spawn_capture(shared: Arc<Shared>, target: Option<String>) {
     std::thread::Builder::new()
-        .name("rd-audio".into())
+        .name("woofer-audio".into())
         .spawn(move || {
             pipewire::init();
             loop {
@@ -128,13 +128,13 @@ fn run_capture(shared: &Arc<Shared>, target: Option<&str>) -> Result<(), pipewir
         // Passive: we never keep the sink awake, so silence with nothing playing costs no wakeups at all.
         *pw::keys::NODE_PASSIVE => "true",
         *pw::keys::NODE_LATENCY => "1024/48000",
-        *pw::keys::NODE_NAME => "reactive-desktop",
-        *pw::keys::APP_NAME => "reactive-desktop",
+        *pw::keys::NODE_NAME => "woofer",
+        *pw::keys::APP_NAME => "woofer",
     };
     if let Some(t) = target {
         props.insert("target.object", t);
     }
-    let stream = pw::stream::StreamRc::new(core, "reactive-desktop", props)?;
+    let stream = pw::stream::StreamRc::new(core, "woofer", props)?;
 
     struct Fmt {
         channels: usize,

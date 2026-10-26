@@ -1184,30 +1184,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "reactive-desktop"
-version = "0.1.0"
-dependencies = [
- "bytemuck",
- "calloop",
- "env_logger",
- "image",
- "inotify",
- "log",
- "naga",
- "pipewire",
- "pollster",
- "raw-window-handle",
- "realfft",
- "rustfft",
- "serde_json",
- "smithay-client-toolkit",
- "wayland-backend",
- "wayland-client",
- "wayland-protocols",
- "wgpu",
-]
-
-[[package]]
 name = "realfft"
 version = "3.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2073,6 +2049,30 @@ name = "winnow"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "23b97319f7b8343df12cc98938e5c3eb436064524c8d2b4e30a1d3a36eecdf81"
+
+[[package]]
+name = "woofer"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "calloop",
+ "env_logger",
+ "image",
+ "inotify",
+ "log",
+ "naga",
+ "pipewire",
+ "pollster",
+ "raw-window-handle",
+ "realfft",
+ "rustfft",
+ "serde_json",
+ "smithay-client-toolkit",
+ "wayland-backend",
+ "wayland-client",
+ "wayland-protocols",
+ "wgpu",
+]
 
 [[package]]
 name = "xcursor"

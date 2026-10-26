@@ -68,12 +68,12 @@ pub fn trim_heap() {
 }
 
 const USAGE: &str = "\
-reactive-desktop: your wallpaper, but alive (audio-reactive layer-shell wallpaper)
+Woofer: your wallpaper, but alive (audio-reactive layer-shell wallpaper)
 
 USAGE:
-    reactive-desktop [OPTIONS]
-    reactive-desktop ctl preset <id> | intensity <x> | pause | resume | status
-    reactive-desktop snapshot <out.png> [--preset <id>] [--wallpaper <path>]   (offscreen test frame)
+    woofer [OPTIONS]
+    woofer ctl preset <id> | intensity <x> | pause | resume | status
+    woofer snapshot <out.png> [--preset <id>] [--wallpaper <path>]   (offscreen test frame)
 
 OPTIONS:
     --preset <id>          shaders/<id>.glsl to run [default: pulse]
@@ -85,7 +85,7 @@ OPTIONS:
     --scale <x>            render scale, upscaled by the compositor [default: 1.0]
     --layer <l>            `background` (opaque, draws the wallpaper) or `bottom` (transparent overlay) [default: background]
     --gpu <p>              `low` (integrated) or `high` (discrete) power preference [default: low]
-    --audio-target <node>  capture this sink's monitor (node.name or serial) instead of the default output
+    --source <node>  capture this sink's monitor (node.name or serial) instead of the default output
     --shaders <dir>        preset directory [default: XDG data dir, /usr/share, or the source checkout]
     --stats                log fps, render CPU time and mode every 5 s
     -h, --help             this text
@@ -102,7 +102,7 @@ struct Args {
     layer: Layer,
     high_power: bool,
     shaders: Option<PathBuf>,
-    audio_target: Option<String>,
+    source: Option<String>,
     stats: bool,
 }
 
@@ -118,7 +118,7 @@ fn parse_args(args: &[String]) -> Result<Args, String> {
         layer: Layer::Background,
         high_power: false,
         shaders: None,
-        audio_target: None,
+        source: None,
         stats: false,
     };
     let mut it = args.iter();
@@ -159,7 +159,7 @@ fn parse_args(args: &[String]) -> Result<Args, String> {
                 }
             }
             "--shaders" => a.shaders = Some(PathBuf::from(val()?)),
-            "--audio-target" => a.audio_target = Some(val()?),
+            "--source" => a.source = Some(val()?),
             "--stats" => a.stats = true,
             _ => return Err(format!("unknown argument {flag:?}\n\n{USAGE}")),
         }
@@ -258,7 +258,7 @@ fn run(a: Args) -> Result<(), String> {
     // Just waking the loop is enough: tick() re-reads the audio state.
     handle.insert_source(ping_source, |_, _, _| {}).map_err(|e| e.to_string())?;
     shared.set_waker(move || ping.ping());
-    audio::spawn_capture(shared, a.audio_target.clone());
+    audio::spawn_capture(shared, a.source.clone());
 
     let (tx, rx) = channel::channel::<Event>();
     let wall_src = a.wallpaper.clone();

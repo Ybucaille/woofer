@@ -158,11 +158,11 @@ pub fn find_dir(explicit: Option<&Path>) -> Option<PathBuf> {
     }
     let mut dirs = Vec::new();
     if let Some(d) = std::env::var_os("XDG_DATA_HOME") {
-        dirs.push(PathBuf::from(d).join("reactive-desktop/shaders"));
+        dirs.push(PathBuf::from(d).join("woofer/shaders"));
     } else if let Some(h) = std::env::var_os("HOME") {
-        dirs.push(PathBuf::from(h).join(".local/share/reactive-desktop/shaders"));
+        dirs.push(PathBuf::from(h).join(".local/share/woofer/shaders"));
     }
-    dirs.push(PathBuf::from("/usr/share/reactive-desktop/shaders"));
+    dirs.push(PathBuf::from("/usr/share/woofer/shaders"));
     // Development checkout: daemon/../shaders.
     dirs.push(PathBuf::from(concat!(env!("CARGO_MANIFEST_DIR"), "/../shaders")));
     dirs.into_iter().find(|d| d.is_dir())
