@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Woofer — your wallpaper, but alive</title>
+<meta name="description" content="A music-reactive wallpaper daemon for Wayland. Keep your favourite image: it breathes on the bass, ripples on the beat, and drifts when it's quiet.">
+<meta name="theme-color" content="#06050d">
+<meta property="og:title" content="Woofer — your wallpaper, but alive">
+<meta property="og:description" content="A music-reactive wallpaper daemon for Wayland. Free and open source.">
+<meta property="og:image" content="clips/glitch.jpg">
+<link rel="icon" href="img/logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/unbounded@5.2.8/index.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/space-grotesk@5.2.8/index.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/jetbrains-mono@5.2.8/index.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="nav">
+  <a class="brand" href="#top" aria-label="Woofer, back to top"><img class="logo" src="img/logo.svg" alt="" width="30" height="30">Woofer</a>
+  <nav aria-label="Sections">
+    <a href="#effects">Effects</a>
+    <a href="#live">Try it</a>
+    <a href="#install">Install</a>
+    <a class="nav-gh" href="https://github.com/Ybucaille/woofer">GitHub</a>
+  </nav>
+</header>
+
+<main id="top">
+
+  <section class="hero">
+    <video class="hero-bg" src="clips/glitch.mp4" poster="clips/glitch.jpg" muted loop playsinline autoplay data-motion aria-hidden="true"></video>
+    <div class="hero-shade" aria-hidden="true"></div>
+    <div class="hero-copy">
+      <p class="eyebrow">Music-reactive wallpaper for Wayland</p>
+      <h1>Your wallpaper,<br><span class="neon">but alive.</span></h1>
+      <p class="lede">Keep your favourite image. Woofer makes it breathe on the bass, ripple on the beat,
+        and drift when it's quiet.</p>
+      <div class="ctas">
+        <a class="btn btn-primary" href="https://github.com/Ybucaille/woofer">Get it on GitHub</a>
+        <a class="btn btn-ghost" href="#live">Try it in your browser</a>
+      </div>
+      <ul class="hero-facts" aria-label="Measured cost">
+        <li><b>0&nbsp;%</b> CPU in silence<sup><a href="#perf" aria-label="see measurements">*</a></sup></li>
+        <li><b>~3&nbsp;%</b> of one core with music</li>
+        <li><b>29&nbsp;MB</b> RAM</li>
+      </ul>
+    </div>
+    <a class="scroll-cue" href="#effects" aria-label="Scroll to the effects"><span></span></a>
+  </section>
+
+  <section id="effects" class="showcase" aria-labelledby="effects-title">
+    <div class="stage">
+      <div class="stage-head">
+        <h2 id="effects-title">Seven ways to <span class="neon">wake it up.</span></h2>
+        <p class="stage-count" aria-hidden="true"><span id="cur">01</span> / <span id="tot">07</span></p>
+      </div>
+      <div class="track" id="track">
+        <!-- cards are written by main.js from EFFECTS so the copy lives in one place -->
+      </div>
+      <div class="progress" aria-hidden="true"><span id="bar"></span></div>
+    </div>
+  </section>
+
+  <p class="also">Plus <b>drift</b>, <b>heat</b>, <b>bokeh</b>, <b>chrome</b>, <b>ribbon</b> and <b>pulse</b>.
+    All thirteen run live below.</p>
+
+  <section id="live" class="live" aria-labelledby="live-title">
+    <div class="section-head">
+      <p class="eyebrow">Live, in this tab</p>
+      <h2 id="live-title">Try it <span class="neon">right now.</span></h2>
+      <p>The same shaders the daemon runs, compiled by your browser. Pick an effect, start the beat,
+        drop in your own wallpaper. Nothing leaves your machine.</p>
+    </div>
+    <div class="player">
+      <div class="screen">
+        <canvas id="live-canvas" aria-label="Live preview of the selected effect"></canvas>
+        <button class="start" id="live-start" type="button">
+          <span class="start-ring" aria-hidden="true"></span>
+          <span class="start-label">Play the demo beat</span>
+        </button>
+      </div>
+      <div class="controls">
+        <div class="chips" id="live-presets" role="radiogroup" aria-label="Effect"></div>
+        <p class="live-desc" id="live-desc" aria-live="polite"></p>
+        <div class="tools">
+          <button type="button" class="tool" id="live-sound" aria-pressed="true">Sound on</button>
+          <button type="button" class="tool" id="live-mic">Use my mic</button>
+          <label class="tool">Your wallpaper<input type="file" id="live-wall" accept="image/*" hidden></label>
+          <label class="tool range">Intensity <input type="range" id="live-int" min="0" max="2" step="0.05" value="1"></label>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="features" aria-labelledby="features-title">
+    <div class="section-head">
+      <p class="eyebrow">What it is</p>
+      <h2 id="features-title">A wallpaper that <span class="neon">listens.</span></h2>
+    </div>
+    <ul class="grid">
+      <li><h3>Your own picture</h3><p>Woofer animates the wallpaper you already love: a speaker cone, a ripple, a glitch, a heat haze. Or pick a generative background.</p></li>
+      <li><h3>Any layer-shell compositor</h3><p>Hyprland, Sway, niri, river… Only Hyprland is tested so far, reports welcome.</p></li>
+      <li><h3>Straight from PipeWire</h3><p>No cava, no extra process. FFT, bass, mids, highs, kick detection and a 16-band spectrum.</p></li>
+      <li><h3>Quiet when it's quiet</h3><p>It draws only on frame callbacks, slows down after 2 s of silence, and pauses behind fullscreen windows.</p></li>
+      <li><h3>Follows your theme</h3><p>With Caelestia, the wallpaper and Material You colours are followed live.</p></li>
+      <li><h3>Live control</h3><p><code>woofer ctl preset ripple</code> switches on the fly. No restart.</p></li>
+    </ul>
+  </section>
+
+  <section id="perf" class="perf" aria-labelledby="perf-title">
+    <div class="section-head">
+      <p class="eyebrow">Measured, not promised</p>
+      <h2 id="perf-title">Light enough to <span class="neon">forget.</span></h2>
+      <p>i7-11800H laptop, Intel UHD, 1080p, preset <code>pulse</code>.
+        <a href="https://github.com/Ybucaille/woofer/blob/main/daemon/BENCH.md">Method and details</a>.</p>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th scope="col"></th><th scope="col">CPU <small>(% of one core)</small></th><th scope="col">RAM <small>(RSS)</small></th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Silence</th><td><b>0.48 %</b> <small>0 % with <code>--idle-fps 0</code></small></td><td>29 MB</td></tr>
+          <tr><th scope="row">Music, 60 fps</th><td><b>3.0 %</b></td><td>29 MB</td></tr>
+          <tr><th scope="row">Music, 30 fps</th><td><b>1.8 %</b></td><td>29 MB</td></tr>
+          <tr><th scope="row">Paused</th><td><b>0.08 %</b></td><td>29 MB</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="fine">About 12 MB of the RSS are the Vulkan driver and system libraries, which every Vulkan client maps.
+      A raw Vulkan backend to go under 1 % with music is on the <a href="https://github.com/Ybucaille/woofer/blob/main/ROADMAP.md">roadmap</a>.</p>
+  </section>
+
+  <section id="install" class="install" aria-labelledby="install-title">
+    <div class="section-head">
+      <p class="eyebrow">Install</p>
+      <h2 id="install-title">Three commands <span class="neon">to life.</span></h2>
+      <p>From source, until packages exist (AUR planned). Needs a Wayland compositor with wlr-layer-shell, PipeWire and a Vulkan driver.</p>
+    </div>
+    <div class="code" data-copy>
+      <button type="button" class="copy">Copy</button>
+<pre><code><span class="c"># Arch: sudo pacman -S --needed rust clang pipewire vulkan-icd-loader  (+ your Vulkan driver)</span>
+git clone https://github.com/Ybucaille/woofer &amp;&amp; cd woofer
+cargo install --path daemon --locked
+mkdir -p ~/.local/share/woofer &amp;&amp; cp -r shaders ~/.local/share/woofer/</code></pre>
+    </div>
+    <div class="code" data-copy>
+      <button type="button" class="copy">Copy</button>
+<pre><code>woofer --wallpaper ~/Pictures/wall.jpg --preset glitch
+woofer ctl preset synthwave     <span class="c"># switch on the fly</span>
+woofer ctl intensity 0.6</code></pre>
+    </div>
+    <p class="fine">Autostart, Sway, Caelestia and every flag: <a href="https://github.com/Ybucaille/woofer#usage">README</a>.</p>
+  </section>
+
+  <section class="write" aria-labelledby="write-title">
+    <div class="write-copy">
+      <p class="eyebrow">Make your own</p>
+      <h2 id="write-title">One file. <span class="neon">Your effect.</span></h2>
+      <p>An effect is a single Shadertoy-style <code>.glsl</code>. The same file runs in the daemon, the Quickshell module
+        and the browser preview. Bass, beat, spectrum and your theme colours come in as uniforms.</p>
+      <a class="btn btn-ghost" href="https://github.com/Ybucaille/woofer/blob/main/shaders/CONTRACT.md">Read the shader contract</a>
+    </div>
+    <div class="code glsl">
+<pre><code><span class="c">// @name My Effect</span>
+<span class="c">// @description One line shown in the picker</span>
+
+<span class="k">void</span> mainImage(<span class="k">out vec4</span> fragColor, <span class="k">in vec2</span> fragCoord) {
+    <span class="k">vec2</span> uv = fragCoord / iResolution;
+    uv += (uv - 0.5) * -0.02 * <span class="u">uBass</span> * <span class="u">uIntensity</span>;
+    fragColor = <span class="k">vec4</span>(wall(uv).rgb, 1.0);
+}</code></pre>
+    </div>
+  </section>
+
+  <section class="kofi" aria-labelledby="kofi-title">
+    <div class="kofi-card">
+      <h2 id="kofi-title">Made by one person, <span class="neon">for the love of it.</span></h2>
+      <p>Woofer is free and will stay free. If it made your desktop a little nicer and you'd like to say thanks,
+        a coffee keeps the shaders coming. There's also a small premium pack, and commissions if you'd like an effect made for you.</p>
+      <div class="ctas">
+        <a class="btn btn-kofi" href="https://ko-fi.com/pivuche">Buy me a coffee on Ko-fi</a>
+        <a class="btn btn-ghost" href="https://github.com/Ybucaille/woofer">Star it on GitHub</a>
+      </div>
+      <p class="fine">A star, a screenshot or an issue helps just as much.</p>
+    </div>
+  </section>
+
+</main>
+
+<footer class="foot">
+  <p><a href="https://github.com/Ybucaille/woofer">Woofer</a> is <a href="https://github.com/Ybucaille/woofer/blob/main/LICENSE">MIT-licensed</a>, made by <a href="https://github.com/Ybucaille">Ybucaille</a>.</p>
+  <p>Wallpaper in every clip: <a href="https://esawebb.org/images/weic2205a/">“Cosmic Cliffs” in the Carina Nebula</a>,
+    James Webb Space Telescope. Credit: NASA, ESA, CSA, and STScI, <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>.</p>
+  <p>No trackers, no cookies.</p>
+</footer>
+
+<script src="live/analysis.js" defer></script>
+<script src="live/shaders.generated.js" defer></script>
+<script src="main.js" defer></script>
+<script src="live.js" defer></script>
+</body>
+</html>
