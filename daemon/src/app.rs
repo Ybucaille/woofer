@@ -84,7 +84,6 @@ pub struct App {
     pub settings: Settings,
     pub audio: std::sync::Arc<Shared>,
     spectrum: Spectrum,
-    raw: [f64; analysis::BANDS],
     pub analysis: analysis::State,
     pub colours: [[f32; 4]; 3],
     time: f64,
@@ -132,7 +131,6 @@ impl App {
             settings,
             audio,
             spectrum: Spectrum::new(),
-            raw: [0.0; analysis::BANDS],
             analysis: analysis::State::default(),
             colours,
             time: 0.0,
@@ -253,8 +251,8 @@ impl App {
             return;
         }
         self.last_advance = Some(now);
-        self.spectrum.read(&self.audio, now, &mut self.raw);
-        self.analysis.analyse(&self.raw, dt);
+        // Analysis runs on the audio's clock (ANALYSIS_RATE steps per second of audio), not once per frame.
+        self.spectrum.advance(&self.audio, now, dt, &mut self.analysis);
         // Like Qt's FrameAnimation: time only runs while we render, a long pause does not jump.
         self.time += dt.min(0.25);
     }

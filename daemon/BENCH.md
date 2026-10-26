@@ -12,13 +12,15 @@ Release build (fat LTO), 2026-10-26.
 ## Results (defaults: `--fps 60 --idle-fps 10`)
 
 Median of three runs of 15 s per state; the three runs were within 0.2 percentage points of each other.
+The music rows (here and for `--fps 30` below) were re-measured after analysis moved to the audio clock
+(2026-10-26, median of three on a busier machine: 3.11–4.48 % at 60 fps, 1.06–2.15 % at 30 fps).
 CPU is % of one core, all threads of the daemon included.
 
 | state | what is happening | CPU | RSS | PSS |
 |---|---|---|---|---|
 | silence | nothing playing, the sink is suspended | **0.48 %** | 28.6 MB | 21.1 MB |
 | silent stream | an app keeps a stream open but plays zeros | **0.69 %** | 29.1 MB | 21.3 MB |
-| music | 124 bpm kick / bass / hats loop, 60 fps | **3.03 %** | 29.1 MB | 21.3 MB |
+| music | 124 bpm kick / bass / hats loop, 60 fps | **3.23 %** | 29.1 MB | 21.3 MB |
 | paused | `ctl pause` while the music keeps playing | **0.08 %** | 29.1 MB | 21.5 MB |
 
 Variants (one run each, same method):
@@ -26,7 +28,7 @@ Variants (one run each, same method):
 | flags | silence | silent stream | music | paused |
 |---|---|---|---|---|
 | `--idle-fps 0` (stop drawing in silence) | **0.00 %** | 0.23 % | 3.12 % | 0.08 % |
-| `--fps 30` | 0.47 % | 0.71 % | **1.76 %** | 0.08 % |
+| `--fps 30` | 0.47 % | 0.71 % | **1.81 %** | 0.08 % |
 | `--scale 0.5` (960×540 render) | 0.51 % | 0.73 % | 3.14 % | 0.07 % |
 
 `--scale` saves GPU time, not CPU: the CPU cost is per frame, not per pixel. The same goes for a fullscreen window
@@ -44,6 +46,10 @@ of that is kernel time (i915 execbuffer, Wayland socket):
 | encode render pass | ~10 |
 | `queue.submit` (wgpu-core tracking + ANV submit) | ~170 |
 | `queue.present` (Mesa WSI, Wayland commit) | ~46 |
+
+Analysis now runs 60 times per second of audio whatever the frame rate, so at `--fps 30` it does 60 steps per
+second instead of 30. One step (ring copy, FFT, bands, detector) takes ~12 µs (release build, timed in a test),
+so those extra steps cost ~0.04 % of a core.
 
 The rest of the 3 % is the event loop, Wayland dispatch, frame callbacks and the PipeWire thread (~0.3 %).
 Paused, the 0.08 % is that PipeWire thread still receiving audio. In silence with the sink suspended it gets nothing,
@@ -71,7 +77,7 @@ counts only; C libraries (Mesa, PipeWire) are not counted.
 
 | goal | measured | |
 |---|---|---|
-| ~0.3 % CPU | 0.48 % silent (0.00 % with `--idle-fps 0`), 3.0 % with music at 60 fps, 1.8 % at 30 fps | met only in silence with `--idle-fps 0` |
+| ~0.3 % CPU | 0.48 % silent (0.00 % with `--idle-fps 0`), 3.2 % with music at 60 fps, 1.8 % at 30 fps | met only in silence with `--idle-fps 0` |
 | < 15 MB RAM | 29 MB RSS, 21 MB PSS, ~10 MB anonymous | not met; ~12 MB of it is the Vulkan driver and system libraries any Vulkan client maps |
 
 Getting the music case near 1 % at 60 fps would need dropping wgpu for raw Vulkan (`ash`): wgpu-core's

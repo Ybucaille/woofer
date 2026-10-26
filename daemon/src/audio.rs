@@ -9,17 +9,24 @@ use std::time::{Duration, Instant};
 use rustfft::num_complex::Complex32;
 use realfft::RealToComplex;
 
-use crate::analysis::BANDS;
+use crate::analysis::{BANDS, State};
 
 pub const FFT_SIZE: usize = 4096;
+/// Analysis steps per second of captured audio, whatever the render rate: the kick detector sees the same frames at
+/// `--fps 30`, at the idle rate and at 60 fps (and the same as the web preview at 60 fps).
+pub const ANALYSIS_RATE: u32 = 60;
+/// Room for FFT_SIZE samples plus the audio captured between two renders (up to 256 ms of it, so down to ~4 fps).
+const RING: usize = 4 * FFT_SIZE;
 /// A chunk louder than this (-60 dBFS) counts as sound for the idle logic.
 const SOUND_THRESHOLD: f32 = 1e-3;
 /// No buffer for this long means the sink is suspended (we are a passive node): treat as silence.
 const STALE: Duration = Duration::from_millis(250);
 
 struct Ring {
-    buf: [f32; FFT_SIZE],
+    buf: [f32; RING],
     pos: usize,
+    /// Samples written since the start (the absolute clock analysis steps are placed on).
+    written: u64,
     rate: u32,
     last_data: Option<Instant>,
 }
@@ -37,7 +44,7 @@ pub struct Shared {
 impl Shared {
     pub fn new() -> Arc<Self> {
         Arc::new(Shared {
-            ring: Mutex::new(Ring { buf: [0.0; FFT_SIZE], pos: 0, rate: 48000, last_data: None }),
+            ring: Mutex::new(Ring { buf: [0.0; RING], pos: 0, written: 0, rate: 48000, last_data: None }),
             epoch: Instant::now(),
             last_sound_ms: AtomicU64::new(0),
             idle: AtomicBool::new(false),
@@ -58,7 +65,7 @@ impl Shared {
         now.saturating_duration_since(self.epoch + Duration::from_millis(ms))
     }
 
-    fn push(&self, interleaved: &[f32], channels: usize, rate: u32) {
+    pub(crate) fn push(&self, interleaved: &[f32], channels: usize, rate: u32) {
         let mut peak = 0.0f32;
         // try_lock: never block PipeWire's loop on the renderer; dropping one chunk is harmless.
         if let Ok(mut r) = self.ring.try_lock() {
@@ -70,8 +77,9 @@ impl Shared {
                 peak = peak.max(m.abs());
                 let p = r.pos;
                 r.buf[p] = m;
-                r.pos = (p + 1) % FFT_SIZE;
+                r.pos = (p + 1) % RING;
             }
+            r.written += (interleaved.len() / channels) as u64;
         } else {
             peak = interleaved.iter().fold(0.0, |a, v| a.max(v.abs()));
         }
@@ -197,7 +205,8 @@ fn run_capture(shared: &Arc<Shared>, target: Option<&str>) -> Result<(), pipewir
     Ok(())
 }
 
-/// Turns the latest FFT_SIZE samples into 16 raw bands. Lives on the render thread; allocates only in `new`.
+/// Turns captured audio into 16 raw bands, one set per analysis step, and feeds them to the analysis.
+/// Lives on the render thread; allocates only in `new`.
 pub struct Spectrum {
     fft: Arc<dyn RealToComplex<f32>>,
     input: Vec<f32>,
@@ -205,14 +214,24 @@ pub struct Spectrum {
     scratch: Vec<Complex32>,
     window: Vec<f32>,
     smooth: Vec<f32>,
-    linear: Box<[f32; FFT_SIZE]>,
+    linear: Box<[f32; RING]>,
     bands: [(usize, usize); BANDS],
+    raw: [f64; BANDS],
     rate: u32,
     silent: bool,
+    /// Analysis steps per second of audio (ANALYSIS_RATE; tests vary it).
+    steps: u32,
+    /// Ring position (`Ring::written`) of the last analysis step.
+    done: u64,
 }
 
 impl Spectrum {
     pub fn new() -> Self {
+        Self::with_steps(ANALYSIS_RATE)
+    }
+
+    /// `steps` analysis steps per second of audio.
+    pub fn with_steps(steps: u32) -> Self {
         // Real-input FFT (realfft packs it into a half-size rustfft): half the work of a complex transform.
         let fft = realfft::RealFftPlanner::<f32>::new().plan_fft_forward(FFT_SIZE);
         let scratch = fft.make_scratch_vec();
@@ -230,10 +249,13 @@ impl Spectrum {
             scratch,
             window,
             smooth: vec![0.0; FFT_SIZE / 2],
-            linear: Box::new([0.0; FFT_SIZE]),
+            linear: Box::new([0.0; RING]),
             bands: [(0, 1); BANDS],
+            raw: [0.0; BANDS],
             rate: 0,
             silent: true,
+            steps,
+            done: 0,
         };
         s.set_rate(48000);
         s
@@ -253,9 +275,11 @@ impl Spectrum {
         }
     }
 
-    /// Fills `raw`. Returns false (and zeros) without doing an FFT when no audio is flowing.
-    pub fn read(&mut self, shared: &Shared, now: Instant, raw: &mut [f64; BANDS]) -> bool {
-        let rate;
+    /// Brings `state` up to date with the captured audio: one analysis step per 1/ANALYSIS_RATE s of audio since
+    /// the last call, each on the FFT_SIZE samples ending there. With no fresh audio, one silent step of `dt`
+    /// (seconds since the last call). Returns whether a beat started.
+    pub fn advance(&mut self, shared: &Shared, now: Instant, dt: f64, state: &mut State) -> bool {
+        let (rate, written, hop, last, mut end, mut step);
         {
             let r = shared.ring.lock().unwrap();
             // No buffers (sink suspended), or only digital silence for a while: nothing to analyse.
@@ -267,19 +291,59 @@ impl Spectrum {
                     self.smooth.fill(0.0);
                     self.silent = true;
                 }
-                raw.fill(0.0);
+                state.analyse(&[0.0; BANDS], dt);
                 return false;
             }
             rate = r.rate;
-            let (a, b) = r.buf.split_at(r.pos);
-            self.linear[..b.len()].copy_from_slice(b);
-            self.linear[b.len()..].copy_from_slice(a);
+            written = r.written;
+            hop = (rate / self.steps).max(1) as u64;
+            last = written / hop * hop;
+            if last < FFT_SIZE as u64 {
+                return false;
+            }
+            end = self.done + hop;
+            step = hop as f64 / rate as f64;
+            // Coming back from silence, a pause or a stall (or the ring no longer holds that window): start again
+            // from the latest audio. That one step stands for the whole gap, which also keeps a jump in the bands
+            // from looking like a fast rise.
+            if self.silent || end + ((RING - FFT_SIZE) as u64) < written {
+                end = last;
+                step = step.max(dt);
+            }
+            if end > last {
+                return false;
+            }
+            // Copy only what the pending steps read, oldest first, into the tail of `linear`.
+            let n = (written - end) as usize + FFT_SIZE;
+            let tail = &mut self.linear[RING - n..];
+            if n <= r.pos {
+                tail.copy_from_slice(&r.buf[r.pos - n..r.pos]);
+            } else {
+                let (a, b) = tail.split_at_mut(n - r.pos);
+                a.copy_from_slice(&r.buf[RING - (n - r.pos)..]);
+                b.copy_from_slice(&r.buf[..r.pos]);
+            }
         }
-        self.silent = false;
         if rate != self.rate {
             self.set_rate(rate);
         }
-        for ((c, &x), &w) in self.input.iter_mut().zip(self.linear.iter()).zip(&self.window) {
+        self.silent = false;
+        let mut beat = false;
+        while end <= last {
+            let at = RING - (written - end) as usize - FFT_SIZE;
+            self.bands_at(at);
+            state.analyse(&self.raw, step);
+            beat |= state.since_beat == 0.0;
+            self.done = end;
+            step = hop as f64 / rate as f64;
+            end += hop;
+        }
+        beat
+    }
+
+    /// Fills `self.raw` from the FFT_SIZE samples at `self.linear[at..]`.
+    fn bands_at(&mut self, at: usize) {
+        for ((c, &x), &w) in self.input.iter_mut().zip(&self.linear[at..at + FFT_SIZE]).zip(&self.window) {
             *c = x * w;
         }
         // Only fails on wrong buffer lengths, which `new` rules out.
@@ -289,39 +353,93 @@ impl Spectrum {
             *s = 0.5 * *s + 0.5 * c.norm() * inv_n;
         }
         // WebAudio getByteFrequencyData: minDecibels -100, maxDecibels -30.
-        for (out, &(i0, i1)) in raw.iter_mut().zip(&self.bands) {
+        for (out, &(i0, i1)) in self.raw.iter_mut().zip(&self.bands) {
             let m = self.smooth[i0..i1].iter().fold(0.0f32, |m, &v| m.max(v));
             let db = 20.0 * m.max(1e-12).log10();
             let byte = ((255.0 / 70.0) * (db + 100.0)).floor().clamp(0.0, 255.0);
             *out = (byte as f64 / 255.0).powi(2);
         }
-        true
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::analysis::tests::{BEAT, House};
 
     #[test]
     fn sine_lands_in_its_band() {
         let shared = Shared::new();
         // 100 Hz at -6 dBFS, stereo.
         let mut v = Vec::new();
-        for i in 0..FFT_SIZE {
+        for i in 0..2 * FFT_SIZE {
             let s = 0.5 * (std::f32::consts::TAU * 100.0 * i as f32 / 48000.0).sin();
             v.push(s);
             v.push(s);
         }
         shared.push(&v, 2, 48000);
         let mut sp = Spectrum::new();
-        let mut raw = [0.0; BANDS];
-        assert!(sp.read(&shared, Instant::now(), &mut raw));
+        let mut state = State::default();
+        sp.advance(&shared, Instant::now(), 1.0 / 60.0, &mut state);
+        let raw = sp.raw;
         let best = (0..BANDS).max_by(|&a, &b| raw[a].total_cmp(&raw[b])).unwrap();
         // 40·(350)^(b/16) contains 100 Hz for b = 2.
         assert_eq!(best, 2, "{raw:?}");
         assert!(raw[best] > 0.5);
         assert!(raw[12] < 0.05);
         assert!(shared.quiet_for(Instant::now()) < Duration::from_secs(1));
+    }
+
+    /// The daemon's real path: audio arrives in 1024-frame PipeWire quanta in real time and we render at `fps`.
+    /// Returns (beat times as seen by the renderer, analysis steps run).
+    fn render(audio: &[f32], fps: f64) -> (Vec<f64>, usize) {
+        const QUANTUM: usize = 1024;
+        let shared = Shared::new();
+        let mut sp = Spectrum::new();
+        let mut state = State::default();
+        let (mut sent, mut beats, mut steps) = (0, Vec::new(), 0);
+        let mut last_done = 0;
+        for k in 1.. {
+            let t = k as f64 / fps;
+            // Every quantum fully captured by time t has been delivered.
+            let due = (t * 48000.0) as usize / QUANTUM * QUANTUM;
+            if due + QUANTUM > audio.len() {
+                break;
+            }
+            while sent + QUANTUM <= due {
+                shared.push(&audio[sent..sent + QUANTUM], 1, 48000);
+                sent += QUANTUM;
+            }
+            if sp.advance(&shared, Instant::now(), 1.0 / fps, &mut state) {
+                beats.push(t);
+            }
+            steps += ((sp.done - last_done) / 800) as usize;
+            last_done = sp.done;
+        }
+        (beats, steps)
+    }
+
+    #[test]
+    fn kicks_over_a_strong_bassline_at_any_render_rate() {
+        // Off-beat bass at 0.65 of the kick, 30 ms attack, from the start. Before analysis ran on the audio clock,
+        // --fps 30 missed up to 1 kick in 2 here and fired on the bass instead.
+        for house in House::strong_cases() {
+            let audio = house.render(45.0 * BEAT);
+            let mut seen = Vec::new();
+            for fps in [60.0, 30.0, 10.0, 144.0] {
+                let (beats, steps) = render(&audio, fps);
+                // Shown at the next render after the quantum holding the kick's window arrived.
+                let delay = 1.0 / fps + 1024.0 / 48000.0;
+                let r = house.score(&beats, delay, audio.len() as f64 / 48000.0);
+                assert!(r.hit == r.kicks && r.off == 0, "{house:?} at {fps} fps: {r:?}");
+                // Kick to visible beat: the analysis window's lag (~30 ms) plus at most a frame and a quantum.
+                assert!(r.latency_ms < 40.0 + 1000.0 * delay, "{house:?} at {fps} fps: {r:?}");
+                // Same detector input whatever the render rate: ~60 steps per second of audio.
+                let secs = audio.len() as f64 / 48000.0;
+                assert!((steps as f64 - secs * 60.0).abs() < 8.0, "{steps} steps at {fps} fps");
+                seen.push((fps, r));
+            }
+            eprintln!("{house:?}: {seen:?}");
+        }
     }
 }

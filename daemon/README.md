@@ -65,7 +65,8 @@ then the source checkout's `shaders/`. Logging: `RUST_LOG=debug`.
   On the background layer, a preset's alpha < 1 lets `wall()` show through, as the contract promises.
 - **`audio.rs`**: PipeWire capture of the default sink's monitor as a *passive* node (it never keeps the sink awake),
   then an emulation of the web preview's WebAudio analyser (4096-point FFT, Blackman window, smoothing 0.5,
-  −100…−30 dB → byte, 16 log bands 40 Hz–14 kHz, max per band, squared).
+  −100…−30 dB → byte, 16 log bands 40 Hz–14 kHz, max per band, squared). It runs on the audio's clock, 60 steps per second of
+  captured audio caught up at each render, so `--fps` and `--idle-fps` don't change what the kick detector sees.
 - **`analysis.rs`**: line-for-line port of `quickshell/analysis.js` (auto-gain, smoothing, band split, kick detection, `flow`).
 - **`ctl.rs`**: one-line commands over `$XDG_RUNTIME_DIR/woofer.sock`. **`hypr.rs`**, **`wallpaper.rs`**:
   Hyprland fullscreen state and Caelestia files (inotify), each on a thread that sleeps until something happens.

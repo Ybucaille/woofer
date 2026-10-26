@@ -3,6 +3,15 @@
 All notable changes to Woofer are listed here. Versions follow [Semantic Versioning](https://semver.org/):
 while Woofer is 0.x, a minor version (0.2.0) may change flags, `ctl` commands or the preset contract.
 
+## [Unreleased]
+
+### Fixed
+
+- Kick detection no longer depends on the frame rate. At `--fps 30` (or the idle rate) a strong off-beat bassline
+  could take over the beat: in one house track, 22 of 45 kicks were missed and beats fired on the bass. The daemon
+  now analyses 60 times per second of audio whatever it renders at, and the detector (shared by all hosts) watches
+  the fastest-rising band in 40–240 Hz instead of the bass average, which a saw or sub bass could outscore.
+
 ## [0.1.0] - 2026-10-26
 
 First release: your wallpaper, but alive.
