@@ -93,7 +93,13 @@ pub fn watch(wallpaper: bool, theme: bool, tx: impl Fn(Change) + Send + 'static)
     if !wallpaper && !theme {
         return;
     }
-    let dir = caelestia_dir();
+    watch_dir(caelestia_dir(), wallpaper, theme, tx);
+}
+
+/// Debounce window: changes arriving within it are reported together, once each.
+const DEBOUNCE: Duration = Duration::from_millis(150);
+
+fn watch_dir(dir: PathBuf, wallpaper: bool, theme: bool, tx: impl Fn(Change) + Send + 'static) {
     std::thread::Builder::new()
         .name("woofer-watch".into())
         .spawn(move || {
@@ -107,29 +113,42 @@ pub fn watch(wallpaper: bool, theme: bool, tx: impl Fn(Change) + Send + 'static)
                 log::info!("watch: {} not found, not following Caelestia", dir.display());
                 return;
             }
+            // (any event, wallpaper changed, theme changed)
+            let scan = |events: inotify::Events<'_>| {
+                let (mut any, mut w, mut t) = (false, false, false);
+                for e in events {
+                    any = true;
+                    let name = e.name.and_then(|n| n.to_str()).unwrap_or("");
+                    w |= Some(&e.wd) == wd_wall.as_ref() && name == "path.txt";
+                    t |= Some(&e.wd) == wd_theme.as_ref() && name == "scheme.json";
+                }
+                (any, w, t)
+            };
             let mut buf = [0u8; 4096];
             loop {
                 let Ok(events) = ino.read_events_blocking(&mut buf) else { return };
-                let (mut w, mut t) = (false, false);
-                for e in events {
-                    let name = e.name.and_then(|n| n.to_str()).unwrap_or("");
-                    if Some(&e.wd) == wd_wall.as_ref() && name == "path.txt" {
-                        w = true;
-                    }
-                    if Some(&e.wd) == wd_theme.as_ref() && name == "scheme.json" {
-                        t = true;
+                let (_, mut w, mut t) = scan(events);
+                if !(w || t) {
+                    continue;
+                }
+                // Debounce bursts of writes, but keep what they change: Caelestia writes scheme.json for the new
+                // wallpaper right after path.txt, and dropping it would leave the old colours on screen.
+                loop {
+                    std::thread::sleep(DEBOUNCE);
+                    // WouldBlock: nothing new since the last read.
+                    let Ok(events) = ino.read_events(&mut buf) else { break };
+                    let (any, w2, t2) = scan(events);
+                    w |= w2;
+                    t |= t2;
+                    if !any {
+                        break;
                     }
                 }
-                if w || t {
-                    // Debounce bursts of writes.
-                    std::thread::sleep(Duration::from_millis(150));
-                    while ino.read_events(&mut buf).is_ok_and(|mut e| e.next().is_some()) {}
-                    if w {
-                        tx(Change::Wallpaper);
-                    }
-                    if t {
-                        tx(Change::Theme);
-                    }
+                if w {
+                    tx(Change::Wallpaper);
+                }
+                if t {
+                    tx(Change::Theme);
                 }
             }
         })
@@ -142,5 +161,28 @@ mod tests {
     fn hex_parses() {
         assert_eq!(super::hex("ff0080"), Some([1.0, 0.0, 128.0 / 255.0, 1.0]));
         assert_eq!(super::hex("nope"), None);
+    }
+
+    /// Caelestia's `set_wallpaper` writes path.txt, then scheme.json a few ms later: both must be reported.
+    #[test]
+    fn wallpaper_then_scheme_reports_both() {
+        use super::{Change, DEBOUNCE, watch_dir};
+        use std::sync::mpsc;
+        let dir = std::env::temp_dir().join(format!("woofer-watch-test-{}", std::process::id()));
+        std::fs::create_dir_all(dir.join("wallpaper")).unwrap();
+        let (tx, rx) = mpsc::channel();
+        watch_dir(dir.clone(), true, true, move |c| {
+            let _ = tx.send(c);
+        });
+        // Let the thread add its watches.
+        std::thread::sleep(std::time::Duration::from_millis(100));
+        std::fs::write(dir.join("wallpaper/path.txt"), "/tmp/wall.jpg").unwrap();
+        std::thread::sleep(DEBOUNCE / 5);
+        std::fs::write(dir.join("scheme.json"), "{}").unwrap();
+        let wait = DEBOUNCE * 10;
+        let got: Vec<Change> = [rx.recv_timeout(wait), rx.recv_timeout(wait)].into_iter().filter_map(Result::ok).collect();
+        let _ = std::fs::remove_dir_all(&dir);
+        assert!(matches!(got[..], [Change::Wallpaper, Change::Theme]), "{got:?}");
+        assert!(rx.recv_timeout(DEBOUNCE * 2).is_err(), "each change is reported once");
     }
 }

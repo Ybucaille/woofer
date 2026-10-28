@@ -3,6 +3,14 @@
 All notable changes to Woofer are listed here. Versions follow [Semantic Versioning](https://semver.org/):
 while Woofer is 0.x, a minor version (0.2.0) may change flags, `ctl` commands or the preset contract.
 
+## [Unreleased]
+
+### Fixed
+
+- With `--wallpaper caelestia`, changing the wallpaper now also applies its new colours. Caelestia writes the
+  colour scheme a few milliseconds after the wallpaper path, and the daemon discarded that write while debouncing
+  the first one, keeping the previous wallpaper's colours until the next theme change.
+
 ## [0.1.1] - 2026-10-27
 
 ### Fixed
